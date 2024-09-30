@@ -13,6 +13,26 @@ void encrypt_rsa(mpz_t z_c, mpz_t z_m, mpz_t z_e, mpz_t z_n){
     mpz_powm(z_c, z_m, z_e, z_n);
 }
 
+void decomposer_base_256(mpz_t n) {
+    mpz_t temp;
+    mpz_init(temp);
+
+    unsigned long coefficient;
+    int i = 0;
+
+    while (mpz_cmp_ui(n, 0) > 0) {
+        // Extraire le coefficient (n mod 256)
+        coefficient = mpz_fdiv_q_ui(temp, n, 256);
+        gmp_printf("Coefficient %d : %lu\n", i, coefficient);
+
+        // Mettre à jour n (n = n div 256)
+        mpz_fdiv_q_ui(n, n, 256);
+        i++;
+    }
+
+    mpz_clear(temp);
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 3)
     {
@@ -73,79 +93,91 @@ int main(int argc, char *argv[]) {
     strcpy(output_file_path, argv[1]);
     strcat(output_file_path, ".crypt");
 
-    // Computing maximum size of bytes block so that m < n
-    // 2^9 * 256^max < 2^n-1 
-    int max = (mpz_sizeinbase(z_n, 2)-9)/9;
-    printf("[+] Maximum size of bytes block is : %d\n", max);
-
     // Encryption
-    printf("Starting encryption...\n");
+    printf("\nStarting encryption...\n");
 
     input_file = fopen(argv[1], "rb");
-    if (!key_file) {
+    if (!input_file) {
         perror("[Error] failed to open input file.\n");
         return 1;
     }
 
     output_file = fopen(output_file_path, "w");
-    if (!key_file) {
+    if (!output_file) {
         perror("[Error] failed to create output file.\n");
         return 1;
     }
 
     printf("[+] files OK\n");
 
+    // Computing maximum size of bytes block so that m < n
+    // 2^9 * 256^max < 2^n-1 
+    int max_encryption = (mpz_sizeinbase(z_n, 2))/9;
+    int max_decryption = max_encryption + 1;
+    printf("[+] Maximum size of bytes block is : %d\n\n", max_encryption);
+
     mpz_t z_m, z_c, z_a, z_b;
     mpz_inits(z_m, z_c, z_a, z_b, NULL);
     unsigned char byte;
     int i = 0;
+    int block = 0;
 
     while (fread(&byte, 1, 1, input_file) == 1) {
+        if(i == 0) printf("\n[+] Reading block %d\n", block);
+
         // If max block size is not reached
-        printf("byte = %d\n", byte);
-        if(i <= max){
-            // Computing m by performing base 256 transformation on byte
-            // m = m + b with b = a * (byte_i in base 10) where a = 256^i
-            mpz_ui_pow_ui(z_a, 256, i);
-            mpz_mul_ui(z_b, z_a, (int)byte);
-            mpz_add(z_m, z_m, z_b);
-            gmp_printf("[info] i = %d | a = %Zu | b = %Zu | m = %Zu\n",i, z_a, z_b, z_m);
-            i++;
-        }
+        printf("   [+] Reading new byte... (%d)\n", byte);
+        // Computing m by performing base 256 transformation on byte
+        // m = m + b with b = a * (byte_i in base 10) where a = 256^i
+        mpz_ui_pow_ui(z_a, 256, i);
+        mpz_mul_ui(z_b, z_a, (int)byte);
+        mpz_add(z_m, z_m, z_b);
+        //gmp_printf("   [info] i = %d | a = %Zu | b = %Zu | m = %Zu\n",i, z_a, z_b, z_m);
+        i++;
+
         // Max block size is reached
-        else{
-            printf("[+] Writting to output file...\n\n");
+        if(i > max_encryption){
+            printf("[+] Writting block %d to output file...\n", block);
             if(mpz_cmp(z_m, z_n)>0){
                 printf("[ALERT] m > n\n");
             }
+            encrypt_rsa(z_c, z_m, z_e, z_n); // m encryption
+            gmp_printf("   [info] block %d :\n   c = %Zu\n   m = %Zu\n", block, z_c, z_m);
+            i++; // adding one block to encryption because c can be greater than 2^(n-1)
             while (i > 0)
             {
                 i--;
-                encrypt_rsa(z_c, z_m, z_e, z_n); // m encryption
                 // Computing the inverse operation 
                 // (byte_i in base 10) = c / 256^i mod 256
-                mpz_ui_pow_ui(z_a, 256, max-i);
+                mpz_ui_pow_ui(z_a, 256, max_decryption-i);
                 mpz_fdiv_q(z_b, z_c, z_a);
                 mpz_mod_ui(z_b, z_b, 256);
                 byte = mpz_get_ui(z_b);
-                i--; // reset block size
+                gmp_printf("   [info] i = %d | a = %Zu | b = %d\n",i, z_a, byte);
                 fwrite(&byte, 1, 1, output_file);
             }
+            // Reset m value for next block
+            mpz_set_ui(z_m, 0);
+            block++;
         }
     }
 
     // Last block (not full size)
+    i = max_encryption + 2;
+    printf("[+] Writting block %d to output file...\n", block);
+    encrypt_rsa(z_c, z_m, z_e, z_n); // m encryption
+    gmp_printf("   [info] block %d :\n   c = %Zu\n   m = %Zu\n", block, z_c, z_m);
     while (i > 0)
     {
         i--;
-        encrypt_rsa(z_c, z_m, z_e, z_n); // m encryption
         // Computing the inverse operation 
         // (byte_i in base 10) = c / 256^i mod 256
-        mpz_ui_pow_ui(z_a, 256, max-i);
+        mpz_ui_pow_ui(z_a, 256, max_decryption-i);
         mpz_fdiv_q(z_b, z_c, z_a);
         mpz_mod_ui(z_b, z_b, 256);
         byte = mpz_get_ui(z_b);
-        i--; // reset block size
+        
+        gmp_printf("   [info] i = %d | a = %Zu | b = %d\n",i, z_a, byte);
         fwrite(&byte, 1, 1, output_file);
     }
 

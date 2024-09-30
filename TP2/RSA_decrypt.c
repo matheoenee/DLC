@@ -22,9 +22,9 @@ int main(int argc, char *argv[]) {
 
     printf("RSA File Decryption (Standard mode)\n\n");
 
-    FILE *key_file;
     FILE *input_file;
     FILE *output_file;
+    FILE *key_file;
 
     // GMP variables initialization
     mpz_t z_d, z_n, z_e; // RSA standard variables
@@ -64,81 +64,92 @@ int main(int argc, char *argv[]) {
 
     fclose(key_file);
 
-    // Computing maximum size of bytes block so that m < n
-    // 2^9 * 256^max < 2^n-1 
-    int max = (mpz_sizeinbase(z_n, 2)-9)/9;
-    printf("[+] Maximum size of bytes block is : %d\n", max);
-
-    // Encryption
+    // Decryption
     printf("Starting decryption...\n");
 
     input_file = fopen(argv[1], "rb");
-    if (!key_file) {
+    if (!input_file) {
         perror("[Error] failed to open input file.\n");
         return 1;
     }
 
     output_file = fopen(argv[2], "w");
-    if (!key_file) {
+    if (!output_file) {
         perror("[Error] failed to create output file.\n");
         return 1;
     }
 
-    printf("[+] files OK\n");
+    printf("[+] files : OK\n");
+
+    // Computing maximum size of bytes block so that m < n
+    // 2^9 * 256^max < 2^n-1 
+    int max = (mpz_sizeinbase(z_n, 2))/9 + 1;
+    printf("[+] Maximum size of bytes block is : %d\n", max);
 
     mpz_t z_m, z_c, z_a, z_b;
     mpz_inits(z_m, z_c, z_a, z_b, NULL);
     unsigned char byte;
     int i = 0;
+    int block = 0;
 
     while (fread(&byte, 1, 1, input_file) == 1) {
+        if(i == 0) printf("\n[+] Reading block %d\n", block);
+
         // If max block size is not reached
-        printf("byte = %d\n", byte);
-        if(i <= max){
-            // Computing m by performing base 256 transformation on byte
-            // m = m + b with b = a * (byte_i in base 10) where a = 256^i
-            mpz_ui_pow_ui(z_a, 256, i);
-            mpz_mul_ui(z_b, z_a, (int)byte);
-            mpz_add(z_c, z_c, z_b);
-            gmp_printf("[info] i = %d | a = %Zu | b = %Zu | c = %Zu\n",i, z_a, z_b, z_c);
-            i++;
-        }
+        //printf("   [+] Reading new byte... (%d)\n", byte);
+        // Computing c by performing base 256 transformation on bytes
+        // c = c + b with b = a * (byte_i in base 10) where a = 256^i
+        mpz_ui_pow_ui(z_a, 256, i);
+        mpz_mul_ui(z_b, z_a, (int)byte);
+        mpz_add(z_c, z_c, z_b);
+        gmp_printf("   [info] i = %d | a = %Zu | b = %d\n",i, z_a, byte);
+        i++;
+
         // Max block size is reached
-        else{
-            printf("[+] Writting to output file...\n\n");
+        if(i > max)
+        {
+            printf("   [+] Writting block %d to output file...\n", block);
             if(mpz_cmp(z_c, z_n)>0){
                 printf("[ALERT] c > n\n");
             }
+            decrypt_rsa(z_m, z_c, z_d, z_n); // c decryption
+            gmp_printf("   [info] block %d :\n   c = %Zu\n   m = %Zu\n", block, z_c, z_m);
             while (i > 0)
             {
                 i--;
-                decrypt_rsa(z_m, z_c, z_e, z_n); // c decryption
                 // Computing the inverse operation 
-                // (byte_i in base 10) = c / 256^i mod 256
+                // (byte_i in base 10) = m / 256^i mod 256
                 mpz_ui_pow_ui(z_a, 256, max-i);
                 mpz_fdiv_q(z_b, z_m, z_a);
                 mpz_mod_ui(z_b, z_b, 256);
                 byte = mpz_get_ui(z_b);
-                i--; // reset block size
+                gmp_printf("   [info] i = %d | a = %Zu | b = %d\n",i, z_a, byte);
                 fwrite(&byte, 1, 1, output_file);
             }
+            // Reset c for next block
+            mpz_set_ui(z_c, 0);
+            block++;
         }
     }
 
-    // Last block (not full size)
+    // Last block decryption
+    decrypt_rsa(z_m, z_c, z_e, z_n); // c decryption
+    gmp_printf("   [info] block %d :\n   c = %Zu\n   m = %Zu\n", block, z_c, z_m);
     while (i > 0)
     {
         i--;
-        decrypt_rsa(z_m, z_c, z_e, z_n); // c decryption
         // Computing the inverse operation 
-        // (byte_i in base 10) = c / 256^i mod 256
+        // (byte_i in base 10) = m / 256^i mod 256
         mpz_ui_pow_ui(z_a, 256, max-i);
         mpz_fdiv_q(z_b, z_m, z_a);
         mpz_mod_ui(z_b, z_b, 256);
         byte = mpz_get_ui(z_b);
-        i--; // reset block size
+        gmp_printf("   [info] i = %d | a = %Zu | b = %d\n",i, z_a, byte);
         fwrite(&byte, 1, 1, output_file);
     }
+    block++;
+
+    printf("[+] End of decryption...\n");
 
     // Clear GMP encryption variables
     mpz_clears(z_m, z_c, z_a, z_b, NULL);
