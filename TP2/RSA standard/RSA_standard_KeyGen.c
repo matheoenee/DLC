@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <gmp.h>
 #include <time.h>
-#include <stdio.h>
 
 void mpz_rand_k_bit_prime(mpz_t z_res, gmp_randstate_t prng, int k){
     mpz_urandomb(z_res, prng, k);
