@@ -4,6 +4,7 @@
         "string.h": "c",
         "stdio.h": "c",
         "limits": "c",
-        "algorithm": "c"
+        "algorithm": "c",
+        "optimized_sieve.h": "c"
     }
 }
