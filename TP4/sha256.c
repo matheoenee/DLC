@@ -44,13 +44,6 @@ void sha256(const char *filename, unsigned char *hash) {
         return;
     }
 
-    // Print the hash in hexadecimal format
-    printf("SHA-256 hash of %s: ", filename);
-    for (unsigned int i = 0; i < hashLength; i++) {
-        printf("%02x", hash[i]);
-    }
-    printf("\n");
-
     // Cleanup
     EVP_MD_CTX_free(mdctx);
     fclose(file);

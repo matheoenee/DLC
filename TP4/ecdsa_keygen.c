@@ -15,33 +15,7 @@ int main(int argc, char *argv[]) {
     mpz_t z_p, z_a, z_b, z_n, z_d;
     mpz_inits(z_p, z_a, z_b, z_n, z_d, G.x, G.y, Q.x, Q.y, NULL);
 
-    FILE *file = fopen("params.txt", "r");
-    if (!file) {
-        fprintf(stderr, "Erreur : impossible d'ouvrir le fichier params.txt\n");
-        return 1;
-    }
-
-    char line[256];
-    while (fgets(line, sizeof(line), file)) {
-        char *key = strtok(line, " =\n");
-        char *value = strtok(NULL, " =\n");
-
-        if (strcmp(key, "a") == 0) {
-            mpz_set_str(z_a, value, 10);  // base 10 pour l'entrée
-        } else if (strcmp(key, "b") == 0) {
-            mpz_set_str(z_b, value, 10);
-        } else if (strcmp(key, "p") == 0) {
-            mpz_set_str(z_p, value, 10);
-        } else if (strcmp(key, "Gx") == 0) {
-            mpz_set_str(G.x, value, 10);
-        } else if (strcmp(key, "Gy") == 0) {
-            mpz_set_str(G.y, value, 10);
-        } else if (strcmp(key, "n") == 0) {
-            mpz_set_str(z_n, value, 10);
-        }
-    }
-
-    fclose(file);
+    read_parameters("params.txt", &z_a, &z_b, &z_p, &G.x, &G.y, &z_n);
 
     // test functions
     printf("TP4 - Elliptic Curve DSA (ECDSA) - KeyGen\n");

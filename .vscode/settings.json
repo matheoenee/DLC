@@ -8,6 +8,7 @@
         "optimized_sieve.h": "c",
         "add_and_double.h": "c",
         "struct.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "sha.h": "c"
     }
 }
