@@ -7,8 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <openssl/evp.h>
-#include <openssl/sha.h>
 
 
 int main(int argc, char *argv[]) {
@@ -23,7 +21,6 @@ int main(int argc, char *argv[]) {
     mpz_t z_p, z_a, z_b, z_n, z_d, z_m, z_k, z_r, z_s;
     mpz_inits(z_p, z_a, z_b, z_n, z_d, z_m, z_k, z_r, z_s, G.x, G.y, K.x, K.y, NULL);
 
-    // test functions
     printf("TP4 - Elliptic Curve DSA (ECDSA) - Sign\n");
     printf("y² = x³ + ax + b (mod p)\n\n");
 

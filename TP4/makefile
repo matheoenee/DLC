@@ -8,10 +8,10 @@ CFLAGS = -Wall -g -O2
 LIBS = -lgmp -lcrypto
 
 # Target executable name
-TARGET = ecdsa_sign
+TARGET = ecdsa_verif
 
 # Source files
-SRCS = ecdsa_sign.c add_and_double.c read_data.c sha256.c
+SRCS = ecdsa_verif.c add_and_double.c read_data.c sha256.c
 
 # Default target
 all: $(TARGET)
