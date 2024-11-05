@@ -11,13 +11,13 @@ LIBS = -lgmp -lcrypto
 TARGET = ecdsa_sign
 
 # Source files
-SRCS = ecdsa_sign.c add_and_double.c
+SRCS = ecdsa_sign.c add_and_double.c read_data.c sha256.c
 
 # Default target
 all: $(TARGET)
 
 # Build the executable directly from source files
-$(TARGET): $(SRCS) add_and_double.h struct.h
+$(TARGET): $(SRCS) add_and_double.h struct.h read_data.h sha256.h
 	$(CC) $(CFLAGS) -o $(TARGET) $(SRCS) $(LIBS)
 
 # Clean up generated files

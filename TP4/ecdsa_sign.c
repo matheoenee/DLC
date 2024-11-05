@@ -1,4 +1,6 @@
 #include "add_and_double.h"
+#include "sha256.h"
+#include "read_data.h"
 #include "struct.h"
 
 #include <stdio.h>
@@ -7,64 +9,6 @@
 #include <time.h>
 #include <openssl/evp.h>
 #include <openssl/sha.h>
-
-#define BUFFER_SIZE 4096  // Read the file in 4096-byte chunks
-
-void sha256(const char *filename, unsigned char *hash) {
-    // unsigned char hash[SHA256_DIGEST_LENGTH]; // Buffer for the resulting hash
-    unsigned char buffer[BUFFER_SIZE];
-
-    FILE *file = fopen(filename, "rb"); // Open the file in binary mode
-    if (!file) {
-        perror("Failed to open file");
-        return;
-    }
-
-    // Initialize the SHA-256 context
-    EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
-    if (!mdctx) {
-        perror("Failed to create OpenSSL context");
-        fclose(file);
-        return;
-    }
-    if (EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL) != 1) {
-        perror("Failed to initialize digest");
-        EVP_MD_CTX_free(mdctx);
-        fclose(file);
-        return;
-    }
-
-    // Read the file in chunks and update the hash
-    size_t bytesRead;
-    while ((bytesRead = fread(buffer, 1, BUFFER_SIZE, file)) > 0) {
-        if (EVP_DigestUpdate(mdctx, buffer, bytesRead) != 1) {
-            perror("Failed to update digest");
-            EVP_MD_CTX_free(mdctx);
-            fclose(file);
-            return;
-        }
-    }
-
-    // Finalize the hash computation
-    unsigned int hashLength;
-    if (EVP_DigestFinal_ex(mdctx, hash, &hashLength) != 1) {
-        perror("Failed to finalize digest");
-        EVP_MD_CTX_free(mdctx);
-        fclose(file);
-        return;
-    }
-
-    // Print the hash in hexadecimal format
-    printf("SHA-256 hash of %s: ", filename);
-    for (unsigned int i = 0; i < hashLength; i++) {
-        printf("%02x", hash[i]);
-    }
-    printf("\n");
-
-    // Cleanup
-    EVP_MD_CTX_free(mdctx);
-    fclose(file);
-}
 
 
 int main(int argc, char *argv[]) {
@@ -79,50 +23,8 @@ int main(int argc, char *argv[]) {
     mpz_t z_p, z_a, z_b, z_n, z_d, z_m, z_k, z_r, z_s;
     mpz_inits(z_p, z_a, z_b, z_n, z_d, z_m, z_k, z_r, z_s, G.x, G.y, K.x, K.y, NULL);
 
-    FILE *file = fopen("params.txt", "r");
-    if (!file) {
-        fprintf(stderr, "[error] : failed to open 'params.txt'.\n");
-        return 1;
-    }
-
-    char line[256];
-    while (fgets(line, sizeof(line), file)) {
-        char *key = strtok(line, " =\n");
-        char *value = strtok(NULL, " =\n");
-
-        if (strcmp(key, "a") == 0) {
-            mpz_set_str(z_a, value, 10);  // base 10 pour l'entrée
-        } else if (strcmp(key, "b") == 0) {
-            mpz_set_str(z_b, value, 10);
-        } else if (strcmp(key, "p") == 0) {
-            mpz_set_str(z_p, value, 10);
-        } else if (strcmp(key, "Gx") == 0) {
-            mpz_set_str(G.x, value, 10);
-        } else if (strcmp(key, "Gy") == 0) {
-            mpz_set_str(G.y, value, 10);
-        } else if (strcmp(key, "n") == 0) {
-            mpz_set_str(z_n, value, 10);
-        }
-    }
-
-    fclose(file);
-
-    file = fopen("ecdsa.key", "r");
-    if (!file) {
-        fprintf(stderr, "[error] : failed to open 'ecdsa.key'.\n");
-        return 1;
-    }
-
-    while (fgets(line, sizeof(line), file)) {
-        char *key = strtok(line, " =\n");
-        char *value = strtok(NULL, " =\n");
-
-        if (strcmp(key, "d") == 0) {
-            mpz_set_str(z_d, value, 16);
-        }
-    }
-
-    fclose(file);
+    read_parameters("params.txt", &z_a, &z_b, &z_p, &G.x, &G.y, &z_n);
+    read_private_key("ecdsa.key", &z_d);
 
     // test functions
     printf("TP4 - Elliptic Curve DSA (ECDSA) - Sign\n");

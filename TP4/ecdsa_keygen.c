@@ -1,4 +1,6 @@
 #include "add_and_double.h"
+#include "read_data.h"
+#include "sha256.h"
 #include "struct.h"
 
 #include <stdio.h>
