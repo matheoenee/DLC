@@ -86,6 +86,17 @@ int main(int argc, char *argv[]) {
         printf("[-] Q is not on the curve!\n\n");
     }
 
+    printf("[+] wrinting private and public key inside 'ecdsa.key'...\n");
+
+    // Open the file in write mode and redirect stdout to it
+    freopen("ecdsa.key", "w", stdout);
+
+    gmp_printf("d=%Zx\n", z_d);
+    gmp_printf("Qx=%Zx\n", Q.x);
+    gmp_printf("Qy=%Zx\n", Q.y);
+
+    fclose(stdout);
+
     // mpz clears
     mpz_clears(z_p, z_a, z_b, z_n, G.x, G.y, Q.x, Q.y, NULL);
 

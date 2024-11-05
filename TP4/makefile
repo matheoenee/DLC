@@ -4,14 +4,14 @@ CC = gcc
 # Compiler flags
 CFLAGS = -Wall -g -O2
 
-# GMP library
-LIBS = -lgmp
+# GMP and OpenSSL libraries
+LIBS = -lgmp -lcrypto
 
 # Target executable name
-TARGET = ecdsa_keygen
+TARGET = ecdsa_sign
 
 # Source files
-SRCS = ecdsa_keygen.c add_and_double.c
+SRCS = ecdsa_sign.c add_and_double.c
 
 # Default target
 all: $(TARGET)
