@@ -36,8 +36,17 @@ int main(int argc, char *argv[]) {
 
     gmp_printf("[+] Gx = %Zu\n", G.x);
     gmp_printf("[+] Gy = %Zu\n", G.y);
-    gmp_printf("[+] order of G = %Zu\n\n", z_n);
+    gmp_printf("[+] ord(G) = n = %Zu\n", z_n);
 
+    size_t size_n = mpz_sizeinbase(z_n, 2);
+    printf("[+] size of n = %zu bits\n\n", size_n);
+
+    printf("Checking if the order of G is prime...\n");
+    if(mpz_probab_prime_p(z_n, 5) != 0) {
+        printf("[+] n is prime.\n\n");
+    }else {
+        printf("[+] n is not prime!\n\n");
+    }
     printf("Checking if G is on the curve...\n");
     if(on_curve(G, z_p, z_a, z_b)) {
         printf("[+] G is on the curve!\n\n");
@@ -53,7 +62,14 @@ int main(int argc, char *argv[]) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
     sha256(argv[1], hash);
     mpz_import(z_m, SHA256_DIGEST_LENGTH, 1, sizeof(hash[0]), 1, 0, hash);
-    gmp_printf("[+] H(m) = %Zx\n\n", z_m);
+    gmp_printf("[+] H(m) = %Zx\n", z_m);
+
+    size_t size_m = mpz_sizeinbase(z_m, 2);
+    printf("[+] size of H(m) before truncate = %zu bits\n", size_m);
+
+    mpz_fdiv_r_2exp(z_m, z_m, size_n); // keep only the lower size_n bits
+    size_m = mpz_sizeinbase(z_m, 2);
+    printf("[+] size of H(m) after truncate = %zu bits\n\n", size_m);
 
     do
     {
@@ -69,7 +85,7 @@ int main(int argc, char *argv[]) {
 
         printf("Computing K = k.G ...\n");
 
-        multiple(&K, G, z_d, z_p, z_a, z_b);
+        multiple(&K, G, z_k, z_p, z_a, z_b);
 
         gmp_printf("[+] Kx = 0x%Zx\n", K.x);
         gmp_printf("[+] Ky = 0x%Zx\n\n", K.y);
